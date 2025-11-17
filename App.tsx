@@ -1,31 +1,13 @@
 
+
 import React, { useState, useEffect, createContext, useContext, useMemo, FC, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link as ScrollLink, Events, scrollSpy } from 'react-scroll';
+import { Link as ScrollLink, Events, scrollSpy, scroller } from 'react-scroll';
 import { FaGithub, FaLinkedin, FaTwitter, FaEnvelope, FaReact, FaNodeJs, FaVuejs, FaAws, FaDocker, FaFigma, FaGitAlt } from 'react-icons/fa';
 import { SiTypescript, SiJavascript, SiHtml5, SiCss3, SiTailwindcss, SiNextdotjs, SiExpress, SiMongodb, SiPostgresql, SiRedis, SiVite, SiWebpack, SiJest } from 'react-icons/si';
-import { FiSun, FiMoon, FiMenu, FiX, FiDownload, FiSend, FiArrowUp, FiSettings, FiSave, FiTrash2, FiPlusCircle, FiLogOut } from 'react-icons/fi';
+import { FiSun, FiMoon, FiMenu, FiX, FiDownload, FiSend, FiArrowUp, FiSettings, FiSave, FiTrash2, FiPlusCircle, FiLogIn, FiUserPlus } from 'react-icons/fi';
 
-import type { Project, SkillCategory, Experience, Skill } from './types';
-
-// This is required for TypeScript to recognize the 'google' object from the GSI script
-declare const google: any;
-
-// A simple JWT decoder for getting user info from Google's credential
-interface GoogleJwtPayload {
-    email: string;
-    name: string;
-    picture: string;
-}
-function jwt_decode<T>(token: string): T {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-
-    return JSON.parse(jsonPayload) as T;
-}
+import type { Project, SkillCategory, Experience, Skill, Certificate } from './types';
 
 // THEME CONTEXT
 const ThemeContext = createContext<{ theme: string; toggleTheme: () => void; } | null>(null);
@@ -106,10 +88,14 @@ const defaultPortfolioData = {
         { id: 4, title: "Personal Blog", description: "A statically generated blog using Next.js and Markdown, optimized for performance and SEO.", image: "https://picsum.photos/seed/project4/600/400", tags: ["Next.js", "TypeScript", "Tailwind CSS"], liveUrl: "#", githubUrl: "#" },
         { id: 5, title: "Weather Dashboard", description: "A clean and modern weather dashboard that provides real-time weather data using a third-party API.", image: "https://picsum.photos/seed/project5/600/400", tags: ["React", "API"], liveUrl: "#", githubUrl: "#" },
         { id: 6, title: "Data Visualization App", description: "An application that visualizes complex datasets using D3.js, with interactive charts and graphs.", image: "https://picsum.photos/seed/project6/600/400", tags: ["React", "D3.js", "TypeScript"], liveUrl: "#", githubUrl: "#" }
-    ] as Project[]
+    ] as Project[],
+    certificates: [
+        { id: 1, title: "React - The Complete Guide", issuer: "Udemy", date: "June 2022", credentialUrl: "#", image: "https://picsum.photos/seed/cert1/600/400" },
+        { id: 2, title: "AWS Certified Cloud Practitioner", issuer: "Amazon Web Services", date: "March 2023", credentialUrl: "#", image: "https://picsum.photos/seed/cert2/600/400" },
+        { id: 3, title: "TypeScript for Professionals", issuer: "Coursera", date: "January 2023", credentialUrl: "#", image: "https://picsum.photos/seed/cert3/600/400" }
+    ] as Certificate[]
 };
 type PortfolioData = typeof defaultPortfolioData;
-type AdminUser = { name: string; email: string; picture: string };
 
 // UI COMPONENTS
 const Section: FC<{ id: string; className?: string; children: React.ReactNode }> = ({ id, className = '', children }) => (
@@ -131,31 +117,25 @@ const SectionTitle: FC<{ children: React.ReactNode }> = ({ children }) => (
     </h2>
 );
 
-const NeonButton: FC<{ children: React.ReactNode; onClick?: () => void; href?: string; download?: boolean | string, className?: string; as?: 'button' | 'a'; type?: 'button' | 'submit' }> = ({ children, onClick, href, download = false, className = '', as = 'button', type = 'button' }) => {
+const GradientButton: FC<{ children: React.ReactNode; onClick?: (e: React.MouseEvent) => void; href?: string; download?: boolean | string, className?: string; as?: 'button' | 'a'; type?: 'button' | 'submit' }> = ({ children, onClick, href, download = false, className = '', as = 'button', type = 'button' }) => {
   const commonClasses = `
-    relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium text-indigo-600 
-    transition duration-300 ease-out border-2 border-indigo-500 rounded-full shadow-md group ${className}
+    inline-flex items-center justify-center px-8 py-3 font-bold text-white 
+    bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full 
+    shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${className}
   `;
-  const spanClasses = `
-    absolute inset-0 w-full h-full bg-white dark:bg-gray-800
-    transition-all duration-300 ease-out transform translate-x-0 -skew-x-12 
-    group-hover:bg-indigo-500 dark:group-hover:bg-indigo-600 group-hover:skew-x-0
-  `;
-  const textClasses = `relative group-hover:text-white dark:text-gray-200`;
 
   if (as === 'a') {
     return (
-        <a href={href} download={download} className={commonClasses} target="_blank" rel="noopener noreferrer">
-            <span className={spanClasses}></span>
-            <span className={textClasses}>{children}</span>
+        <a href={href} download={download} className={commonClasses} target="_blank" rel="noopener noreferrer" onClick={onClick}>
+            {children}
         </a>
     );
   }
 
   return (
     <button onClick={onClick} className={commonClasses} type={type}>
-      <span className={spanClasses}></span>
-      <span className={textClasses}>{children}</span>
+      {children}
     </button>
   );
 };
@@ -180,7 +160,7 @@ const Navbar: FC = () => {
         };
     }, []);
 
-    const navLinks = ["home", "about", "projects", "skills", "contact"];
+    const navLinks = ["home", "about", "projects", "certificates", "skills", "contact"];
     const linkClasses = "capitalize cursor-pointer py-2 text-gray-600 dark:text-gray-300 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors duration-300";
     const activeLinkClasses = "text-indigo-500 dark:text-indigo-400";
     
@@ -246,6 +226,16 @@ const Hero: FC<{data: PortfolioData}> = ({data}) => {
         visible: { opacity: 1, y: 0 },
     };
 
+    const handleHireMeClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        scroller.scrollTo('contact', {
+          duration: 800,
+          delay: 0,
+          smooth: 'easeInOutQuart',
+          offset: -70
+        });
+    };
+
     return (
         <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/20 to-purple-50/20 dark:from-indigo-900/10 dark:to-purple-900/10 backdrop-blur-sm"></div>
@@ -276,10 +266,10 @@ const Hero: FC<{data: PortfolioData}> = ({data}) => {
                             {data.tagline}
                         </p>
                         <div className="flex justify-center md:justify-start space-x-4 mb-8">
-                             <NeonButton as="a" href="#contact">Hire Me</NeonButton>
-                             <NeonButton as="a" href={data.resumeUrl} download="Sameer-Bavaji-Resume.pdf">
+                             <GradientButton as="a" href="#contact" onClick={handleHireMeClick}>Hire Me</GradientButton>
+                             <GradientButton as="a" href={data.resumeUrl} download="Sameer-Bavaji-Resume.pdf">
                                  <FiDownload className="mr-2"/> Download CV
-                             </NeonButton>
+                             </GradientButton>
                         </div>
                          <div className="flex justify-center md:justify-start space-x-6">
                             <a href={data.socials.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaGithub /></a>
@@ -415,14 +405,44 @@ const Projects: FC<{projects: Project[]}> = ({projects}) => {
     );
 };
 
+const Certificates: FC<{certificates: Certificate[]}> = ({certificates}) => (
+    <Section id="certificates" className="bg-white dark:bg-gray-800">
+        <SectionTitle>Certificates & Awards</SectionTitle>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {certificates.map((cert) => (
+                <motion.div
+                    key={cert.id}
+                    className="bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 group"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <div className="overflow-hidden">
+                        <img src={cert.image} alt={cert.title} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"/>
+                    </div>
+                    <div className="p-6">
+                        <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-white">{cert.title}</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-1"><span className="font-semibold">Issuer:</span> {cert.issuer}</p>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4"><span className="font-semibold">Date:</span> {cert.date}</p>
+                        <a href={cert.credentialUrl} target="_blank" rel="noreferrer" className="font-bold text-indigo-500 hover:underline">
+                            View Credential
+                        </a>
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    </Section>
+);
+
 const Skills: FC<{skills: SkillCategory[]}> = ({skills}) => (
-    <Section id="skills" className="bg-white dark:bg-gray-800">
+    <Section id="skills">
         <SectionTitle>My Skills</SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {skills.map((category, index) => (
                 <motion.div 
                     key={category.title} 
-                    className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
+                    className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -433,7 +453,7 @@ const Skills: FC<{skills: SkillCategory[]}> = ({skills}) => (
                         {category.skills.map(skill => {
                             const Icon = iconMap[skill.icon];
                             return (
-                                <div key={skill.name} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                <div key={skill.name} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                                     {Icon && <Icon style={{ color: skill.color }} className="text-2xl"/>}
                                     <span className="text-gray-700 dark:text-gray-200">{skill.name}</span>
                                 </div>
@@ -447,12 +467,30 @@ const Skills: FC<{skills: SkillCategory[]}> = ({skills}) => (
 );
 
 const Contact: FC = () => {
+    const [formData, setFormData] = useState({ name: '', email: '', message: '' });
     const [status, setStatus] = useState('');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setStatus('Thank you for your message!');
-        setTimeout(() => setStatus(''), 3000);
-        (e.target as HTMLFormElement).reset();
+        const subject = encodeURIComponent(`Portfolio Contact from ${formData.name}`);
+        const body = encodeURIComponent(
+`Name: ${formData.name}
+Email: ${formData.email}
+
+Message:
+${formData.message}`
+        );
+        
+        window.location.href = `mailto:sameerbavaji63@gmail.com?subject=${subject}&body=${body}`;
+
+        setStatus('Redirecting to your email client to send the message!');
+        setTimeout(() => setStatus(''), 5000);
+        setFormData({ name: '', email: '', message: '' }); // Reset form state
     };
 
     return (
@@ -461,14 +499,38 @@ const Contact: FC = () => {
             <div className="max-w-3xl mx-auto">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
-                        <input type="text" name="name" placeholder="Your Name" required className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"/>
-                        <input type="email" name="email" placeholder="Your Email" required className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"/>
+                        <input
+                            type="text"
+                            name="name"
+                            placeholder="Your Name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                        />
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="Your Email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                        />
                     </div>
-                    <textarea name="message" placeholder="Your Message" rows={5} required className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"></textarea>
+                    <textarea
+                        name="message"
+                        placeholder="Your Message"
+                        rows={5}
+                        value={formData.message}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                    ></textarea>
                     <div className="text-center">
-                        <NeonButton as="button" type="submit" className="w-full md:w-auto">
+                        <GradientButton as="button" type="submit" className="w-full md:w-auto">
                             Send Message <FiSend className="ml-2"/>
-                        </NeonButton>
+                        </GradientButton>
                     </div>
                     {status && <p className="text-center mt-4 text-green-500">{status}</p>}
                 </form>
@@ -520,11 +582,93 @@ const ScrollToTopButton = () => {
     );
 };
 
-const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => void; onLogout: () => void; adminUser: AdminUser; adminEmail: string; onAdminEmailChange: (newEmail: string) => void; }> = ({ data, onSave, onLogout, adminUser, adminEmail, onAdminEmailChange }) => {
+const AuthModal: FC<{ onClose: () => void; onSuccess: () => void; }> = ({ onClose, onSuccess }) => {
+    const [isSignUp, setIsSignUp] = useState(false);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!localStorage.getItem('adminCredentials')) {
+            setIsSignUp(true);
+        }
+    }, []);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (isSignUp) {
+            if (password !== confirmPassword) {
+                setError('Passwords do not match.');
+                return;
+            }
+            if (password.length < 6) {
+                setError('Password must be at least 6 characters long.');
+                return;
+            }
+            localStorage.setItem('adminCredentials', JSON.stringify({ username, password }));
+            onSuccess();
+        } else {
+            const storedCreds = localStorage.getItem('adminCredentials');
+            if (storedCreds) {
+                const creds = JSON.parse(storedCreds);
+                if (username === creds.username && password === creds.password) {
+                    onSuccess();
+                } else {
+                    setError('Invalid username or password.');
+                }
+            } else {
+                setError('No admin account found. Please sign up.');
+                setIsSignUp(true);
+            }
+        }
+    };
+
+    const inputStyleClasses = "w-full px-3 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+
+    return (
+         <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div 
+                initial={{scale: 0.9, opacity: 0}}
+                animate={{scale: 1, opacity: 1}}
+                exit={{scale: 0.9, opacity: 0}}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-md relative"
+            >
+                <button onClick={onClose} title="Close" className="absolute top-3 right-3 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
+                    <FiX className="w-6 h-6" />
+                </button>
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold text-center mb-4">{isSignUp ? 'Admin Sign Up' : 'Admin Sign In'}</h2>
+                    <p className="text-center text-sm text-gray-500 mb-6">{isSignUp ? 'Create your admin account to manage content.' : 'Sign in to manage your portfolio.'}</p>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required className={inputStyleClasses} aria-label="Username"/>
+                        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className={inputStyleClasses} aria-label="Password"/>
+                        {isSignUp && (
+                            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className={inputStyleClasses} aria-label="Confirm Password"/>
+                        )}
+                        <GradientButton type="submit" className="w-full">{isSignUp ? <><FiUserPlus className="mr-2"/> Sign Up</> : <><FiLogIn className="mr-2"/> Sign In</>}</GradientButton>
+                    </form>
+                    {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+                    {!isSignUp && (
+                        <p className="text-center text-sm mt-6">
+                            No account?
+                            <button onClick={() => setIsSignUp(true)} className="text-indigo-500 hover:underline ml-1">
+                                Sign Up
+                            </button>
+                        </p>
+                    )}
+                </div>
+            </motion.div>
+         </motion.div>
+    );
+};
+
+const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => void; onClose: () => void; }> = ({ data, onSave, onClose }) => {
     const [editableData, setEditableData] = useState<PortfolioData>(data);
     const [activeTab, setActiveTab] = useState('general');
-    const [newAdminEmail, setNewAdminEmail] = useState(adminEmail);
-    const [emailChangeMessage, setEmailChangeMessage] = useState({ type: '', text: '' });
+    const [saveStatus, setSaveStatus] = useState('');
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -536,17 +680,23 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
         setEditableData(prev => ({ ...prev, socials: { ...prev.socials, [name]: value } }));
     };
 
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: string, project_id?: number) => {
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: string, id?: number) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = (event) => {
+                const result = event.target?.result as string;
                 if (field === 'resumeUrl') {
-                    setEditableData(prev => ({ ...prev, resumeUrl: event.target?.result as string }));
-                } else if (field === 'projectImage' && project_id !== undefined) {
+                    setEditableData(prev => ({ ...prev, resumeUrl: result }));
+                } else if (field === 'projectImage' && id !== undefined) {
                     setEditableData(prev => ({
                         ...prev,
-                        projects: prev.projects.map(p => p.id === project_id ? { ...p, image: event.target?.result as string } : p)
+                        projects: prev.projects.map(p => p.id === id ? { ...p, image: result } : p)
+                    }));
+                } else if (field === 'certificateImage' && id !== undefined) {
+                     setEditableData(prev => ({
+                        ...prev,
+                        certificates: prev.certificates.map(c => c.id === id ? { ...c, image: result } : c)
                     }));
                 }
             };
@@ -565,7 +715,27 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
 
     const deleteProject = (id: number) => {
         if (window.confirm("Are you sure you want to delete this project?")) {
-            setEditableData(prev => ({...prev, projects: prev.projects.filter(p => p.id !== id)}));
+            const updatedData = {
+                ...editableData,
+                projects: editableData.projects.filter(p => p.id !== id)
+            };
+            setEditableData(updatedData);
+            onSave(updatedData);
+        }
+    };
+
+    const handleCertificateChange = (id: number, field: string, value: string) => {
+        setEditableData(prev => ({ ...prev, certificates: prev.certificates.map(c => c.id === id ? {...c, [field]: value} : c) }));
+    };
+
+    const addCertificate = () => {
+        const newCert: Certificate = { id: Date.now(), title: "New Certificate", issuer: "", date: "", credentialUrl: "#", image: "https://picsum.photos/seed/new-cert/600/400" };
+        setEditableData(prev => ({...prev, certificates: [newCert, ...prev.certificates]}));
+    };
+
+    const deleteCertificate = (id: number) => {
+        if (window.confirm("Are you sure you want to delete this certificate?")) {
+            setEditableData(prev => ({...prev, certificates: prev.certificates.filter(c => c.id !== id)}));
         }
     };
 
@@ -584,42 +754,28 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
             return { ...prev, skills: newSkillsData };
         });
     };
+
+    const handleSave = () => {
+        onSave(editableData);
+        setSaveStatus('Changes saved successfully!');
+        setTimeout(() => setSaveStatus(''), 3000);
+    };
     
-    const tabs = ['general', 'about', 'projects', 'skills', 'security'];
+    const tabs = ['general', 'about', 'projects', 'certificates', 'skills'];
     const inputStyleClasses = "w-full px-3 py-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
     const fileInputStyleClasses = "w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100";
     
-    const handleAdminEmailUpdate = (e: React.FormEvent) => {
-        e.preventDefault();
-        setEmailChangeMessage({ type: '', text: '' });
-        if (!newAdminEmail || !/^\S+@\S+\.\S+$/.test(newAdminEmail)) {
-            setEmailChangeMessage({ type: 'error', text: 'Please enter a valid email address.' });
-            return;
-        }
-        if (window.confirm(`Are you sure you want to change the admin email to ${newAdminEmail}? You will need to log in with this new account.`)) {
-            onAdminEmailChange(newAdminEmail);
-            setEmailChangeMessage({ type: 'success', text: 'Admin email updated successfully!' });
-            setTimeout(() => setEmailChangeMessage({ type: '', text: '' }), 3000);
-        }
-    };
-
     return (
         <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
                 <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
                     <h2 className="text-xl font-bold">Content Manager</h2>
-                    <div className="flex items-center space-x-4">
-                        <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center">
-                            <img src={adminUser.picture} alt={adminUser.name} className="w-6 h-6 rounded-full mr-2"/>
-                            {adminUser.email}
-                        </div>
-                        <button onClick={onLogout} title="Sign Out" className="flex items-center space-x-2 text-red-500 hover:text-red-600">
-                           <FiLogOut /> <span>Sign Out</span>
-                        </button>
-                    </div>
+                    <button onClick={onClose} title="Close" className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
+                        <FiX className="w-6 h-6" />
+                    </button>
                 </div>
                 <div className="flex flex-grow overflow-hidden">
-                    <aside className="w-1/4 p-4 border-r dark:border-gray-700">
+                    <aside className="w-1/4 p-4 border-r dark:border-gray-700 overflow-y-auto">
                         <nav className="flex flex-col space-y-2">
                            {tabs.map(tab => (
                                 <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-left px-3 py-2 rounded ${activeTab === tab ? 'bg-indigo-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
@@ -669,6 +825,24 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
                                 ))}
                             </div>
                         )}
+                        {activeTab === 'certificates' && (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-semibold">Certificates</h3>
+                                    <button onClick={addCertificate} className="flex items-center space-x-2 text-indigo-500"><FiPlusCircle /> <span>Add Certificate</span></button>
+                                </div>
+                                {editableData.certificates.map(cert => (
+                                    <div key={cert.id} className="p-4 border rounded-lg dark:border-gray-700 space-y-3">
+                                        <div className="flex justify-between items-center"><h4 className="font-bold">{cert.title}</h4> <button onClick={() => deleteCertificate(cert.id)} className="text-red-500"><FiTrash2 /></button></div>
+                                        <div><label className="block text-sm font-medium">Title</label><input type="text" value={cert.title} onChange={(e) => handleCertificateChange(cert.id, 'title', e.target.value)} className={inputStyleClasses}/></div>
+                                        <div><label className="block text-sm font-medium">Issuer</label><input type="text" value={cert.issuer} onChange={(e) => handleCertificateChange(cert.id, 'issuer', e.target.value)} className={inputStyleClasses}/></div>
+                                        <div><label className="block text-sm font-medium">Date</label><input type="text" value={cert.date} onChange={(e) => handleCertificateChange(cert.id, 'date', e.target.value)} className={inputStyleClasses}/></div>
+                                        <div><label className="block text-sm font-medium">Credential URL</label><input type="text" value={cert.credentialUrl} onChange={(e) => handleCertificateChange(cert.id, 'credentialUrl', e.target.value)} className={inputStyleClasses}/></div>
+                                        <div><label className="block text-sm font-medium">Image</label><input type="file" accept="image/*" onChange={e => handleFileChange(e, 'certificateImage', cert.id)} className={fileInputStyleClasses}/></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                          {activeTab === 'skills' && (
                             <div className="space-y-6">
                                 <h3 className="text-lg font-semibold">Skills</h3>
@@ -688,107 +862,16 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
                                 ))}
                             </div>
                         )}
-                        {activeTab === 'security' && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold">Admin Authorization</h3>
-                                {adminEmail === 'admin@example.com' && (
-                                    <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700 rounded-md text-sm">
-                                        You are using the default admin email. It's highly recommended to change it to your own Google account email.
-                                    </div>
-                                )}
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Set the Google account email that is authorized to access the admin panel.</p>
-                                <form onSubmit={handleAdminEmailUpdate} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium">Authorized Admin Email</label>
-                                        <input type="email" value={newAdminEmail} onChange={e => setNewAdminEmail(e.target.value)} className={inputStyleClasses} required/>
-                                    </div>
-                                    {emailChangeMessage.text && (
-                                        <p className={`text-sm ${emailChangeMessage.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>
-                                            {emailChangeMessage.text}
-                                        </p>
-                                    )}
-                                    <div className="flex justify-end pt-2">
-                                        <NeonButton as="button" type="submit">
-                                            Update Admin Email
-                                        </NeonButton>
-                                    </div>
-                                </form>
-                            </div>
-                        )}
                     </main>
                 </div>
-                <div className="p-4 border-t dark:border-gray-700 flex justify-end">
-                    <NeonButton onClick={() => { onSave(editableData); }}>
+                <div className="p-4 border-t dark:border-gray-700 flex justify-between items-center">
+                    <span className="text-sm text-green-500">{saveStatus}</span>
+                    <GradientButton onClick={handleSave}>
                         <FiSave className="mr-2"/> Save Changes
-                    </NeonButton>
+                    </GradientButton>
                 </div>
             </div>
         </motion.div>
-    );
-};
-
-const GoogleSignInPrompt: FC<{ onCorrect: (user: AdminUser) => void; onClose: () => void; adminEmail: string; }> = ({ onCorrect, onClose, adminEmail }) => {
-    const [error, setError] = useState('');
-
-    const handleGoogleSignIn = (res: any) => {
-        const userObject = jwt_decode<GoogleJwtPayload>(res.credential);
-        if (userObject.email === adminEmail) {
-            onCorrect({ name: userObject.name, email: userObject.email, picture: userObject.picture });
-        } else {
-            setError(`Unauthorized. Only ${adminEmail} can log in.`);
-            google.accounts.id.disableAutoSelect();
-        }
-    };
-    
-    useEffect(() => {
-        const googleClientId = document.querySelector<HTMLMetaElement>('meta[name="google-signin-client_id"]')?.content;
-
-        if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
-            setError('Google Client ID is not configured.');
-            return;
-        }
-
-        try {
-            google.accounts.id.initialize({
-                client_id: googleClientId,
-                callback: handleGoogleSignIn,
-            });
-            google.accounts.id.renderButton(
-                document.getElementById('googleSignInButton'),
-                { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
-            );
-            google.accounts.id.prompt(); // Display the One Tap prompt
-        } catch (e) {
-            console.error("Google Sign-In initialization error", e);
-            setError("Could not initialize Google Sign-In.");
-        }
-
-    }, []);
-    
-    const modalVariants = {
-        hidden: { opacity: 0, scale: 0.9 },
-        visible: { opacity: 1, scale: 1 },
-        exit: { opacity: 0, scale: 0.9 }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[101] flex items-center justify-center p-4">
-            <motion.div
-                variants={modalVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm"
-            >
-                <h3 className="text-xl font-bold mb-2 text-center text-gray-800 dark:text-white">Admin Access</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">Sign in with Google to manage content.</p>
-                <div id="googleSignInButton" className="flex justify-center mb-4"></div>
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                <div className="flex justify-end pt-2">
-                     <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition font-medium">Cancel</button>
-                </div>
-            </motion.div>
-        </div>
     );
 };
 
@@ -796,10 +879,9 @@ const GoogleSignInPrompt: FC<{ onCorrect: (user: AdminUser) => void; onClose: ()
 // Main App Component
 const App = () => {
     const [portfolioData, setPortfolioData] = useState<PortfolioData>(defaultPortfolioData);
-    const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [isSignInPromptVisible, setIsSignInPromptVisible] = useState(false);
-    const [adminEmail, setAdminEmail] = useState(() => localStorage.getItem('adminEmail') || 'admin@example.com');
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
 
     useEffect(() => {
         try {
@@ -807,39 +889,19 @@ const App = () => {
             if (savedData) {
                 setPortfolioData(JSON.parse(savedData));
             }
-        } catch (error) {
-            console.error("Failed to parse portfolio data from localStorage", error);
+        } catch (err) {
+            console.error("Failed to parse portfolio data from localStorage", err);
         }
     }, []);
 
-    const updatePortfolioData = (newData: PortfolioData) => {
+    function updatePortfolioData(newData: PortfolioData) {
         localStorage.setItem('portfolioData', JSON.stringify(newData));
         setPortfolioData(newData);
-    };
-    
-    const handleAdminEmailChange = (newEmail: string) => {
-        setAdminEmail(newEmail);
-        localStorage.setItem('adminEmail', newEmail);
-    };
+    }
 
-    const handleAdminClick = () => {
-        if (adminUser) {
-            setIsAdminOpen(true);
-        } else {
-            setIsSignInPromptVisible(true);
-        }
-    };
-
-    const handleLoginSuccess = (user: AdminUser) => {
-        setIsSignInPromptVisible(false);
-        setAdminUser(user);
+    const handleLoginSuccess = () => {
+        setShowAuthModal(false);
         setIsAdminOpen(true);
-    };
-    
-    const handleLogout = () => {
-        setAdminUser(null);
-        setIsAdminOpen(false);
-        google.accounts.id.disableAutoSelect();
     };
 
   return (
@@ -850,21 +912,24 @@ const App = () => {
           <Hero data={portfolioData} />
           <About data={portfolioData} />
           <Projects projects={portfolioData.projects} />
+          <Certificates certificates={portfolioData.certificates} />
           <Skills skills={portfolioData.skills} />
           <Contact />
         </main>
         <Footer data={portfolioData} />
         <ScrollToTopButton />
         <button
-            onClick={handleAdminClick}
+            onClick={() => setShowAuthModal(true)}
             className="fixed bottom-8 left-8 bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl z-50 hover:bg-gray-600 transition-colors"
             aria-label="Open Admin Panel"
         >
             <FiSettings />
         </button>
         <AnimatePresence>
-            {isSignInPromptVisible && <GoogleSignInPrompt onCorrect={handleLoginSuccess} onClose={() => setIsSignInPromptVisible(false)} adminEmail={adminEmail} />}
-            {isAdminOpen && adminUser && <AdminPanel data={portfolioData} onSave={updatePortfolioData} onLogout={handleLogout} adminUser={adminUser} adminEmail={adminEmail} onAdminEmailChange={handleAdminEmailChange} />}
+            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onSuccess={handleLoginSuccess} />}
+        </AnimatePresence>
+        <AnimatePresence>
+            {isAdminOpen && <AdminPanel data={portfolioData} onSave={updatePortfolioData} onClose={() => setIsAdminOpen(false)} />}
         </AnimatePresence>
       </div>
     </ThemeProvider>

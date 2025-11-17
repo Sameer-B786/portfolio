@@ -27,3 +27,12 @@ export interface Experience {
   company: string;
   description: string;
 }
+
+export interface Certificate {
+  id: number;
+  title: string;
+  issuer: string;
+  date: string;
+  credentialUrl: string;
+  image: string;
+}
