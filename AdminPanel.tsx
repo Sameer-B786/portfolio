@@ -1,16 +1,11 @@
 import React, { useState, useEffect, ChangeEvent, FC } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiTrash2, FiPlusCircle, FiX } from 'react-icons/fi';
+import { FiSave, FiTrash2, FiPlusCircle, FiX, FiLogOut } from 'react-icons/fi';
 
 import type { Project, Certificate, Experience, Education, Skill } from './types';
 import { PortfolioData } from './portfolio';
 import { iconMap } from './iconMap';
-
-const GradientButton: FC<{ children: React.ReactNode; onClick?: () => void; className?: string; type?: 'button' | 'submit' }> = ({ children, onClick, className = '', type = 'button' }) => (
-    <button onClick={onClick} className={`inline-flex items-center justify-center px-8 py-3 font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${className}`} type={type}>
-        {children}
-    </button>
-);
+import GradientButton from './GradientButton';
 
 const inputStyleClasses = "w-full px-3 py-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
 const fileInputStyleClasses = "w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100";
@@ -59,7 +54,7 @@ function EditableSection<T extends { id: number; title?: string; degree?: string
 }
 
 
-const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => void; onClose: () => void; }> = ({ data, onSave, onClose }) => {
+const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => void; onClose: () => void; onSignOut: () => void; }> = ({ data, onSave, onClose, onSignOut }) => {
     const [editableData, setEditableData] = useState<PortfolioData>(data);
     const [activeTab, setActiveTab] = useState('general');
     const [saveStatus, setSaveStatus] = useState('');
@@ -91,9 +86,7 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
             const reader = new FileReader();
             reader.onload = (event) => {
                 const result = event.target?.result as string;
-                if (field === 'heroImage') {
-                    setEditableData(prev => ({ ...prev, heroImage: result }));
-                } else if (field === 'resumeUrl') {
+                if (field === 'resumeUrl') {
                     setEditableData(prev => ({ ...prev, resumeUrl: result }));
                 } else if (field === 'projectImage' && id !== undefined) {
                     setEditableData(prev => ({ ...prev, projects: prev.projects.map(p => p.id === id ? { ...p, image: result } : p) }));
@@ -166,8 +159,6 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
                                 <div><label className="block text-sm font-medium">LinkedIn</label><input type="text" name="linkedin" value={editableData.socials.linkedin} onChange={handleSocialChange} className={inputStyleClasses}/></div>
                                 <div><label className="block text-sm font-medium">Twitter</label><input type="text" name="twitter" value={editableData.socials.twitter} onChange={handleSocialChange} className={inputStyleClasses}/></div>
                                 <div><label className="block text-sm font-medium">Email</label><input type="text" name="email" value={editableData.socials.email} onChange={handleSocialChange} className={inputStyleClasses}/></div>
-                                 <h3 className="text-lg font-semibold mt-6">Hero Image</h3>
-                                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'heroImage')} className={fileInputStyleClasses}/>
                                 <h3 className="text-lg font-semibold mt-6">Resume</h3>
                                 <p className="text-sm text-gray-500 mb-2">Upload a new PDF resume.</p>
                                 <input type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'resumeUrl')} className={fileInputStyleClasses}/>
@@ -269,7 +260,12 @@ const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => 
                     </main>
                 </div>
                 <div className="p-4 border-t dark:border-gray-700 flex justify-between items-center">
-                    <span className="text-sm text-green-500">{saveStatus}</span>
+                    <div className="flex items-center gap-4">
+                        <button onClick={onSignOut} className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-500">
+                           <FiLogOut className="mr-2"/> Sign Out
+                        </button>
+                        <span className="text-sm text-green-500">{saveStatus}</span>
+                    </div>
                     <GradientButton onClick={handleSave}>
                         <FiSave className="mr-2"/> Save Changes
                     </GradientButton>
