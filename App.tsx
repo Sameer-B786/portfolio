@@ -1,13 +1,15 @@
-
-
-import React, { useState, useEffect, createContext, useContext, useMemo, FC, ChangeEvent } from 'react';
+import React, { useState, useEffect, createContext, useContext, useMemo, FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link as ScrollLink, Events, scrollSpy, scroller } from 'react-scroll';
-import { FaGithub, FaLinkedin, FaTwitter, FaEnvelope, FaReact, FaNodeJs, FaVuejs, FaAws, FaDocker, FaFigma, FaGitAlt } from 'react-icons/fa';
-import { SiTypescript, SiJavascript, SiHtml5, SiCss3, SiTailwindcss, SiNextdotjs, SiExpress, SiMongodb, SiPostgresql, SiRedis, SiVite, SiWebpack, SiJest } from 'react-icons/si';
-import { FiSun, FiMoon, FiMenu, FiX, FiDownload, FiSend, FiArrowUp, FiSettings, FiSave, FiTrash2, FiPlusCircle, FiLogIn, FiUserPlus } from 'react-icons/fi';
+import { FaGithub, FaLinkedin, FaTwitter, FaEnvelope } from 'react-icons/fa';
+import { FiSun, FiMoon, FiMenu, FiX, FiDownload, FiSend, FiArrowUp, FiSettings } from 'react-icons/fi';
 
-import type { Project, SkillCategory, Experience, Skill, Certificate } from './types';
+import { Project, SkillCategory, Certificate } from './types';
+import { usePortfolioData } from './usePortfolioData';
+import { PortfolioData } from './portfolio';
+import AdminPanel from './AdminPanel';
+import { iconMap } from './iconMap';
+import { sanitizeUrl } from './sanitize';
 
 // THEME CONTEXT
 const ThemeContext = createContext<{ theme: string; toggleTheme: () => void; } | null>(null);
@@ -49,53 +51,6 @@ const useTheme = () => {
   }
   return context;
 };
-
-// ICON MAPPING FOR DYNAMIC CONTENT
-const iconMap: { [key: string]: React.ElementType } = {
-    FaReact, FaNodeJs, FaVuejs, FaAws, FaDocker, FaFigma, FaGitAlt, SiTypescript, SiJavascript,
-    SiHtml5, SiCss3, SiTailwindcss, SiNextdotjs, SiExpress, SiMongodb, SiPostgresql,
-    SiRedis, SiVite, SiWebpack, SiJest,
-};
-
-// MOCK DATA (DEFAULT)
-const defaultPortfolioData = {
-    name: "Sameer Bavaji",
-    tagline: "I build elegant and performant web applications.",
-    resumeUrl: "/resume.pdf",
-    socials: {
-        github: "https://github.com",
-        linkedin: "https://linkedin.com",
-        twitter: "https://twitter.com",
-        email: "mailto:sameer.bavaji@example.com"
-    },
-    about: "I'm a passionate Full-Stack Developer with a knack for creating beautiful, functional, and user-centric digital experiences. With a strong foundation in modern web technologies, I enjoy tackling complex problems and turning ideas into reality. When I'm not coding, I enjoy exploring new technologies, contributing to open-source, and brewing the perfect cup of coffee.",
-    experiences: [
-        { date: "2021 - Present", title: "Senior Web Developer", company: "Tech Solutions Inc.", description: "Led development of scalable web apps using React and Node.js. Mentored junior developers and improved code quality by 30%." },
-        { date: "2019 - 2021", title: "Frontend Developer", company: "Creative Minds LLC", description: "Developed and maintained responsive user interfaces for various clients, enhancing user engagement metrics by 25%." },
-        { date: "2018 - 2019", title: "Junior Developer", company: "Innovate Co.", description: "Assisted in building and testing web applications, gaining hands-on experience with the MERN stack." },
-        { date: "2018", title: "B.Sc. in Computer Science", company: "University of Technology", description: "Graduated with honors, focusing on software engineering and web development principles." }
-    ] as Experience[],
-    skills: [
-        { title: "Frontend", skills: [ { name: "React", icon: "FaReact", color: "#61DAFB" }, { name: "Next.js", icon: "SiNextdotjs", color: "#000000" }, { name: "Vue.js", icon: "FaVuejs", color: "#4FC08D" }, { name: "TypeScript", icon: "SiTypescript", color: "#3178C6" }, { name: "JavaScript", icon: "SiJavascript", color: "#F7DF1E" }, { name: "HTML5", icon: "SiHtml5", color: "#E34F26" }, { name: "CSS3", icon: "SiCss3", color: "#1572B6" }, { name: "Tailwind CSS", icon: "SiTailwindcss", color: "#06B6D4" } ] },
-        { title: "Backend", skills: [ { name: "Node.js", icon: "FaNodeJs", color: "#339933" }, { name: "Express", icon: "SiExpress", color: "#000000" }, { name: "PostgreSQL", icon: "SiPostgresql", color: "#4169E1" }, { name: "MongoDB", icon: "SiMongodb", color: "#47A248" }, { name: "Redis", icon: "SiRedis", color: "#DC382D" } ] },
-        { title: "Cloud & DevOps", skills: [ { name: "AWS", icon: "FaAws", color: "#FF9900" }, { name: "Docker", icon: "FaDocker", color: "#2496ED" }, { name: "Git", icon: "FaGitAlt", color: "#F05032" } ] },
-        { title: "Tools", skills: [ { name: "Vite", icon: "SiVite", color: "#646CFF" }, { name: "Webpack", icon: "SiWebpack", color: "#8DD6F9" }, { name: "Jest", icon: "SiJest", color: "#C21325" }, { name: "Figma", icon: "FaFigma", color: "#F24E1E" } ] }
-    ] as SkillCategory[],
-    projects: [
-        { id: 1, title: "E-Commerce Platform", description: "A feature-rich e-commerce site with product management, user authentication, and a Stripe payment gateway.", image: "https://picsum.photos/seed/project1/600/400", tags: ["React", "Node.js", "MongoDB", "Stripe"], liveUrl: "#", githubUrl: "#" },
-        { id: 2, title: "Real-Time Chat App", description: "A WebSocket-based chat application for instant messaging, with support for rooms and private messages.", image: "https://picsum.photos/seed/project2/600/400", tags: ["Vue.js", "Express", "Socket.io"], liveUrl: "#", githubUrl: "#" },
-        { id: 3, title: "Project Management Tool", description: "A Kanban-style project management tool with drag-and-drop functionality and collaborative features.", image: "https://picsum.photos/seed/project3/600/400", tags: ["React", "Next.js", "PostgreSQL"], liveUrl: "#", githubUrl: "#" },
-        { id: 4, title: "Personal Blog", description: "A statically generated blog using Next.js and Markdown, optimized for performance and SEO.", image: "https://picsum.photos/seed/project4/600/400", tags: ["Next.js", "TypeScript", "Tailwind CSS"], liveUrl: "#", githubUrl: "#" },
-        { id: 5, title: "Weather Dashboard", description: "A clean and modern weather dashboard that provides real-time weather data using a third-party API.", image: "https://picsum.photos/seed/project5/600/400", tags: ["React", "API"], liveUrl: "#", githubUrl: "#" },
-        { id: 6, title: "Data Visualization App", description: "An application that visualizes complex datasets using D3.js, with interactive charts and graphs.", image: "https://picsum.photos/seed/project6/600/400", tags: ["React", "D3.js", "TypeScript"], liveUrl: "#", githubUrl: "#" }
-    ] as Project[],
-    certificates: [
-        { id: 1, title: "React - The Complete Guide", issuer: "Udemy", date: "June 2022", credentialUrl: "#", image: "https://picsum.photos/seed/cert1/600/400" },
-        { id: 2, title: "AWS Certified Cloud Practitioner", issuer: "Amazon Web Services", date: "March 2023", credentialUrl: "#", image: "https://picsum.photos/seed/cert2/600/400" },
-        { id: 3, title: "TypeScript for Professionals", issuer: "Coursera", date: "January 2023", credentialUrl: "#", image: "https://picsum.photos/seed/cert3/600/400" }
-    ] as Certificate[]
-};
-type PortfolioData = typeof defaultPortfolioData;
 
 // UI COMPONENTS
 const Section: FC<{ id: string; className?: string; children: React.ReactNode }> = ({ id, className = '', children }) => (
@@ -267,15 +222,15 @@ const Hero: FC<{data: PortfolioData}> = ({data}) => {
                         </p>
                         <div className="flex justify-center md:justify-start space-x-4 mb-8">
                              <GradientButton as="a" href="#contact" onClick={handleHireMeClick}>Hire Me</GradientButton>
-                             <GradientButton as="a" href={data.resumeUrl} download="Sameer-Bavaji-Resume.pdf">
+                             <GradientButton as="a" href={sanitizeUrl(data.resumeUrl)} download="Sameer-Bavaji-Resume.pdf">
                                  <FiDownload className="mr-2"/> Download CV
                              </GradientButton>
                         </div>
                          <div className="flex justify-center md:justify-start space-x-6">
-                            <a href={data.socials.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaGithub /></a>
-                            <a href={data.socials.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaLinkedin /></a>
-                            <a href={data.socials.twitter} target="_blank" rel="noreferrer" aria-label="Twitter" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaTwitter /></a>
-                            <a href={data.socials.email} aria-label="Email" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaEnvelope /></a>
+                            <a href={sanitizeUrl(data.socials.github)} target="_blank" rel="noreferrer" aria-label="GitHub" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaGithub /></a>
+                            <a href={sanitizeUrl(data.socials.linkedin)} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaLinkedin /></a>
+                            <a href={sanitizeUrl(data.socials.twitter)} target="_blank" rel="noreferrer" aria-label="Twitter" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaTwitter /></a>
+                            <a href={sanitizeUrl(data.socials.email)} aria-label="Email" className="text-2xl text-gray-500 hover:text-indigo-500 transition-colors"><FaEnvelope /></a>
                         </div>
                     </motion.div>
                     <motion.div
@@ -286,7 +241,7 @@ const Hero: FC<{data: PortfolioData}> = ({data}) => {
                     >
                         <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96">
                             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 blur-2xl animate-pulse"></div>
-                            <img src="https://picsum.photos/seed/profile/400/400" alt={data.name} className="relative w-full h-full object-cover rounded-full shadow-2xl border-4 border-white dark:border-gray-800" />
+                            <img src={data.heroImage} alt={data.name} className="relative w-full h-full object-cover rounded-full shadow-2xl border-4 border-white dark:border-gray-800" />
                         </div>
                     </motion.div>
                 </div>
@@ -298,39 +253,54 @@ const Hero: FC<{data: PortfolioData}> = ({data}) => {
 const About: FC<{data: PortfolioData}> = ({data}) => (
     <Section id="about" className="bg-white dark:bg-gray-800">
         <SectionTitle>About Me</SectionTitle>
-        <div className="grid md:grid-cols-5 gap-12 items-center">
-            <motion.div
-                className="md:col-span-2 flex justify-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, amount: 0.5 }}
-                transition={{ duration: 0.5 }}
-            >
-                <img src="https://picsum.photos/seed/about/400/500" alt="About Sameer" className="rounded-lg shadow-xl w-full max-w-sm"/>
-            </motion.div>
-            <div className="md:col-span-3">
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">{data.about}</p>
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Experience & Education</h3>
-                <div className="relative border-l-2 border-indigo-200 dark:border-indigo-800">
-                    {data.experiences.map((exp, index) => (
-                        <motion.div
-                            key={index}
-                            className="mb-10 ml-6"
-                            initial={{ opacity: 0, x: 20 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
-                        >
-                            <span className="absolute flex items-center justify-center w-6 h-6 bg-indigo-200 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-indigo-900">
-                                <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002 2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path></svg>
-                            </span>
-                            <h4 className="flex items-center mb-1 text-lg font-semibold text-gray-900 dark:text-white">{exp.title} <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300 ml-3">{exp.date}</span></h4>
-                            <p className="block mb-2 text-sm font-normal leading-none text-gray-500 dark:text-gray-400">{exp.company}</p>
-                            <p className="mb-4 text-base font-normal text-gray-600 dark:text-gray-300">{exp.description}</p>
-                        </motion.div>
-                    ))}
+        <div className="max-w-4xl mx-auto text-center">
+             <p className="text-lg text-gray-600 dark:text-gray-300 mb-16">{data.about}</p>
+             <div className="grid md:grid-cols-2 gap-16 text-left">
+                <div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-8 text-center">Experience</h3>
+                    <div className="relative border-l-2 border-indigo-200 dark:border-indigo-800">
+                        {data.experiences.map((exp, index) => (
+                            <motion.div
+                                key={exp.id}
+                                className="mb-10 ml-6"
+                                initial={{ opacity: 0, x: 20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: index * 0.1 }}
+                            >
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-indigo-200 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-indigo-900">
+                                    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002 2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path></svg>
+                                </span>
+                                <h4 className="flex items-center mb-1 text-lg font-semibold text-gray-900 dark:text-white">{exp.title} <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300 ml-3">{exp.date}</span></h4>
+                                <p className="block mb-2 text-sm font-normal leading-none text-gray-500 dark:text-gray-400">{exp.company}</p>
+                                <p className="mb-4 text-base font-normal text-gray-600 dark:text-gray-300">{exp.description}</p>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+                 <div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-8 text-center">Education</h3>
+                    <div className="relative border-l-2 border-indigo-200 dark:border-indigo-800">
+                        {data.education.map((edu, index) => (
+                            <motion.div
+                                key={edu.id}
+                                className="mb-10 ml-6"
+                                initial={{ opacity: 0, x: 20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: index * 0.1 }}
+                            >
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-indigo-200 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-indigo-900">
+                                    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002 2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path></svg>
+                                </span>
+                                <h4 className="flex items-center mb-1 text-lg font-semibold text-gray-900 dark:text-white">{edu.degree} <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300 ml-3">{edu.date}</span></h4>
+                                <p className="block mb-2 text-sm font-normal leading-none text-gray-500 dark:text-gray-400">{edu.institution}</p>
+                                <p className="mb-4 text-base font-normal text-gray-600 dark:text-gray-300">{edu.description}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+             </div>
         </div>
     </Section>
 );
@@ -392,8 +362,8 @@ const Projects: FC<{projects: Project[]}> = ({projects}) => {
                                     ))}
                                 </div>
                                 <div className="mt-auto flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
-                                    <a href={project.liveUrl} target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">Live Demo</a>
-                                    <a href={project.githubUrl} target="_blank" rel="noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors text-2xl"><FaGithub /></a>
+                                    <a href={sanitizeUrl(project.liveUrl)} target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">Live Demo</a>
+                                    <a href={sanitizeUrl(project.githubUrl)} target="_blank" rel="noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors text-2xl"><FaGithub /></a>
                                 </div>
                             </div>
                         </div>
@@ -425,7 +395,7 @@ const Certificates: FC<{certificates: Certificate[]}> = ({certificates}) => (
                         <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-white">{cert.title}</h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-1"><span className="font-semibold">Issuer:</span> {cert.issuer}</p>
                         <p className="text-gray-600 dark:text-gray-400 mb-4"><span className="font-semibold">Date:</span> {cert.date}</p>
-                        <a href={cert.credentialUrl} target="_blank" rel="noreferrer" className="font-bold text-indigo-500 hover:underline">
+                        <a href={sanitizeUrl(cert.credentialUrl)} target="_blank" rel="noreferrer" className="font-bold text-indigo-500 hover:underline">
                             View Credential
                         </a>
                     </div>
@@ -543,10 +513,10 @@ const Footer: FC<{data: PortfolioData}> = ({data}) => (
     <footer className="bg-white dark:bg-gray-800 py-8 border-t border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 text-center text-gray-600 dark:text-gray-300">
             <div className="flex justify-center space-x-6 mb-4">
-                <a href={data.socials.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="text-xl hover:text-indigo-500 transition-colors"><FaGithub /></a>
-                <a href={data.socials.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="text-xl hover:text-indigo-500 transition-colors"><FaLinkedin /></a>
-                <a href={data.socials.twitter} target="_blank" rel="noreferrer" aria-label="Twitter" className="text-xl hover:text-indigo-500 transition-colors"><FaTwitter /></a>
-                <a href={data.socials.email} aria-label="Email" className="text-xl hover:text-indigo-500 transition-colors"><FaEnvelope /></a>
+                <a href={sanitizeUrl(data.socials.github)} target="_blank" rel="noreferrer" aria-label="GitHub" className="text-xl hover:text-indigo-500 transition-colors"><FaGithub /></a>
+                <a href={sanitizeUrl(data.socials.linkedin)} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="text-xl hover:text-indigo-500 transition-colors"><FaLinkedin /></a>
+                <a href={sanitizeUrl(data.socials.twitter)} target="_blank" rel="noreferrer" aria-label="Twitter" className="text-xl hover:text-indigo-500 transition-colors"><FaTwitter /></a>
+                <a href={sanitizeUrl(data.socials.email)} aria-label="Email" className="text-xl hover:text-indigo-500 transition-colors"><FaEnvelope /></a>
             </div>
             <p>&copy; {new Date().getFullYear()} {data.name}. All Rights Reserved.</p>
         </div>
@@ -582,327 +552,10 @@ const ScrollToTopButton = () => {
     );
 };
 
-const AuthModal: FC<{ onClose: () => void; onSuccess: () => void; }> = ({ onClose, onSuccess }) => {
-    const [isSignUp, setIsSignUp] = useState(false);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        if (!localStorage.getItem('adminCredentials')) {
-            setIsSignUp(true);
-        }
-    }, []);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (isSignUp) {
-            if (password !== confirmPassword) {
-                setError('Passwords do not match.');
-                return;
-            }
-            if (password.length < 6) {
-                setError('Password must be at least 6 characters long.');
-                return;
-            }
-            localStorage.setItem('adminCredentials', JSON.stringify({ username, password }));
-            onSuccess();
-        } else {
-            const storedCreds = localStorage.getItem('adminCredentials');
-            if (storedCreds) {
-                const creds = JSON.parse(storedCreds);
-                if (username === creds.username && password === creds.password) {
-                    onSuccess();
-                } else {
-                    setError('Invalid username or password.');
-                }
-            } else {
-                setError('No admin account found. Please sign up.');
-                setIsSignUp(true);
-            }
-        }
-    };
-
-    const inputStyleClasses = "w-full px-3 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
-
-    return (
-         <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <motion.div 
-                initial={{scale: 0.9, opacity: 0}}
-                animate={{scale: 1, opacity: 1}}
-                exit={{scale: 0.9, opacity: 0}}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-md relative"
-            >
-                <button onClick={onClose} title="Close" className="absolute top-3 right-3 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
-                    <FiX className="w-6 h-6" />
-                </button>
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold text-center mb-4">{isSignUp ? 'Admin Sign Up' : 'Admin Sign In'}</h2>
-                    <p className="text-center text-sm text-gray-500 mb-6">{isSignUp ? 'Create your admin account to manage content.' : 'Sign in to manage your portfolio.'}</p>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required className={inputStyleClasses} aria-label="Username"/>
-                        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className={inputStyleClasses} aria-label="Password"/>
-                        {isSignUp && (
-                            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className={inputStyleClasses} aria-label="Confirm Password"/>
-                        )}
-                        <GradientButton type="submit" className="w-full">{isSignUp ? <><FiUserPlus className="mr-2"/> Sign Up</> : <><FiLogIn className="mr-2"/> Sign In</>}</GradientButton>
-                    </form>
-                    {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
-                    {!isSignUp && (
-                        <p className="text-center text-sm mt-6">
-                            No account?
-                            <button onClick={() => setIsSignUp(true)} className="text-indigo-500 hover:underline ml-1">
-                                Sign Up
-                            </button>
-                        </p>
-                    )}
-                </div>
-            </motion.div>
-         </motion.div>
-    );
-};
-
-const AdminPanel: FC<{ data: PortfolioData; onSave: (newData: PortfolioData) => void; onClose: () => void; }> = ({ data, onSave, onClose }) => {
-    const [editableData, setEditableData] = useState<PortfolioData>(data);
-    const [activeTab, setActiveTab] = useState('general');
-    const [saveStatus, setSaveStatus] = useState('');
-
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setEditableData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSocialChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setEditableData(prev => ({ ...prev, socials: { ...prev.socials, [name]: value } }));
-    };
-
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: string, id?: number) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const result = event.target?.result as string;
-                if (field === 'resumeUrl') {
-                    setEditableData(prev => ({ ...prev, resumeUrl: result }));
-                } else if (field === 'projectImage' && id !== undefined) {
-                    setEditableData(prev => ({
-                        ...prev,
-                        projects: prev.projects.map(p => p.id === id ? { ...p, image: result } : p)
-                    }));
-                } else if (field === 'certificateImage' && id !== undefined) {
-                     setEditableData(prev => ({
-                        ...prev,
-                        certificates: prev.certificates.map(c => c.id === id ? { ...c, image: result } : c)
-                    }));
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
-    const handleProjectChange = (id: number, field: string, value: string) => {
-         setEditableData(prev => ({ ...prev, projects: prev.projects.map(p => p.id === id ? {...p, [field]: field === 'tags' ? value.split(',').map(t => t.trim()) : value} : p) }));
-    };
-    
-    const addProject = () => {
-        const newProject: Project = { id: Date.now(), title: "New Project", description: "", image: "https://picsum.photos/seed/new/600/400", tags: [], liveUrl: "#", githubUrl: "#" };
-        setEditableData(prev => ({...prev, projects: [newProject, ...prev.projects]}));
-    };
-
-    const deleteProject = (id: number) => {
-        if (window.confirm("Are you sure you want to delete this project?")) {
-            const updatedData = {
-                ...editableData,
-                projects: editableData.projects.filter(p => p.id !== id)
-            };
-            setEditableData(updatedData);
-            onSave(updatedData);
-        }
-    };
-
-    const handleCertificateChange = (id: number, field: string, value: string) => {
-        setEditableData(prev => ({ ...prev, certificates: prev.certificates.map(c => c.id === id ? {...c, [field]: value} : c) }));
-    };
-
-    const addCertificate = () => {
-        const newCert: Certificate = { id: Date.now(), title: "New Certificate", issuer: "", date: "", credentialUrl: "#", image: "https://picsum.photos/seed/new-cert/600/400" };
-        setEditableData(prev => ({...prev, certificates: [newCert, ...prev.certificates]}));
-    };
-
-    const deleteCertificate = (id: number) => {
-        if (window.confirm("Are you sure you want to delete this certificate?")) {
-            setEditableData(prev => ({...prev, certificates: prev.certificates.filter(c => c.id !== id)}));
-        }
-    };
-
-    const handleSkillChange = (catIndex: number, skillIndex: number, field: 'name' | 'icon' | 'color', value: string) => {
-        setEditableData(prev => {
-            const newSkillsData = prev.skills.map((category, cIndex) => {
-                if (cIndex !== catIndex) return category;
-                return {
-                    ...category,
-                    skills: category.skills.map((skill, sIndex) => {
-                        if (sIndex !== skillIndex) return skill;
-                        return { ...skill, [field]: value };
-                    })
-                };
-            });
-            return { ...prev, skills: newSkillsData };
-        });
-    };
-
-    const handleSave = () => {
-        onSave(editableData);
-        setSaveStatus('Changes saved successfully!');
-        setTimeout(() => setSaveStatus(''), 3000);
-    };
-    
-    const tabs = ['general', 'about', 'projects', 'certificates', 'skills'];
-    const inputStyleClasses = "w-full px-3 py-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
-    const fileInputStyleClasses = "w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100";
-    
-    return (
-        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
-                <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                    <h2 className="text-xl font-bold">Content Manager</h2>
-                    <button onClick={onClose} title="Close" className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
-                        <FiX className="w-6 h-6" />
-                    </button>
-                </div>
-                <div className="flex flex-grow overflow-hidden">
-                    <aside className="w-1/4 p-4 border-r dark:border-gray-700 overflow-y-auto">
-                        <nav className="flex flex-col space-y-2">
-                           {tabs.map(tab => (
-                                <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-left px-3 py-2 rounded ${activeTab === tab ? 'bg-indigo-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                    {tab}
-                                </button>
-                           ))}
-                        </nav>
-                    </aside>
-                    <main className="w-3/4 p-6 overflow-y-auto">
-                        {activeTab === 'general' && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold">General Info</h3>
-                                <div><label className="block text-sm font-medium">Name</label><input type="text" name="name" value={editableData.name} onChange={handleInputChange} className={inputStyleClasses}/></div>
-                                <div><label className="block text-sm font-medium">Tagline</label><input type="text" name="tagline" value={editableData.tagline} onChange={handleInputChange} className={inputStyleClasses}/></div>
-                                <h3 className="text-lg font-semibold mt-6">Social Links</h3>
-                                <div><label className="block text-sm font-medium">GitHub</label><input type="text" name="github" value={editableData.socials.github} onChange={handleSocialChange} className={inputStyleClasses}/></div>
-                                <div><label className="block text-sm font-medium">LinkedIn</label><input type="text" name="linkedin" value={editableData.socials.linkedin} onChange={handleSocialChange} className={inputStyleClasses}/></div>
-                                <div><label className="block text-sm font-medium">Twitter</label><input type="text" name="twitter" value={editableData.socials.twitter} onChange={handleSocialChange} className={inputStyleClasses}/></div>
-                                <div><label className="block text-sm font-medium">Email</label><input type="text" name="email" value={editableData.socials.email} onChange={handleSocialChange} className={inputStyleClasses}/></div>
-                                <h3 className="text-lg font-semibold mt-6">Resume</h3>
-                                <p className="text-sm text-gray-500 mb-2">Upload a new PDF resume.</p>
-                                <input type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'resumeUrl')} className={fileInputStyleClasses}/>
-                            </div>
-                        )}
-                        {activeTab === 'about' && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold">About Me</h3>
-                                <textarea name="about" value={editableData.about} onChange={handleInputChange} rows={8} className={inputStyleClasses}/>
-                            </div>
-                        )}
-                        {activeTab === 'projects' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Projects</h3>
-                                    <button onClick={addProject} className="flex items-center space-x-2 text-indigo-500"><FiPlusCircle /> <span>Add Project</span></button>
-                                </div>
-                                {editableData.projects.map(p => (
-                                    <div key={p.id} className="p-4 border rounded-lg dark:border-gray-700 space-y-3">
-                                        <div className="flex justify-between items-center"><h4 className="font-bold">{p.title}</h4> <button onClick={() => deleteProject(p.id)} className="text-red-500"><FiTrash2 /></button></div>
-                                        <div><label className="block text-sm font-medium">Title</label><input type="text" value={p.title} onChange={(e) => handleProjectChange(p.id, 'title', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Description</label><textarea value={p.description} onChange={(e) => handleProjectChange(p.id, 'description', e.target.value)} rows={3} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Tags (comma separated)</label><input type="text" value={p.tags.join(', ')} onChange={(e) => handleProjectChange(p.id, 'tags', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Live URL</label><input type="text" value={p.liveUrl} onChange={(e) => handleProjectChange(p.id, 'liveUrl', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">GitHub URL</label><input type="text" value={p.githubUrl} onChange={(e) => handleProjectChange(p.id, 'githubUrl', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Image</label><input type="file" accept="image/*" onChange={e => handleFileChange(e, 'projectImage', p.id)} className={fileInputStyleClasses}/></div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {activeTab === 'certificates' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Certificates</h3>
-                                    <button onClick={addCertificate} className="flex items-center space-x-2 text-indigo-500"><FiPlusCircle /> <span>Add Certificate</span></button>
-                                </div>
-                                {editableData.certificates.map(cert => (
-                                    <div key={cert.id} className="p-4 border rounded-lg dark:border-gray-700 space-y-3">
-                                        <div className="flex justify-between items-center"><h4 className="font-bold">{cert.title}</h4> <button onClick={() => deleteCertificate(cert.id)} className="text-red-500"><FiTrash2 /></button></div>
-                                        <div><label className="block text-sm font-medium">Title</label><input type="text" value={cert.title} onChange={(e) => handleCertificateChange(cert.id, 'title', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Issuer</label><input type="text" value={cert.issuer} onChange={(e) => handleCertificateChange(cert.id, 'issuer', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Date</label><input type="text" value={cert.date} onChange={(e) => handleCertificateChange(cert.id, 'date', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Credential URL</label><input type="text" value={cert.credentialUrl} onChange={(e) => handleCertificateChange(cert.id, 'credentialUrl', e.target.value)} className={inputStyleClasses}/></div>
-                                        <div><label className="block text-sm font-medium">Image</label><input type="file" accept="image/*" onChange={e => handleFileChange(e, 'certificateImage', cert.id)} className={fileInputStyleClasses}/></div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                         {activeTab === 'skills' && (
-                            <div className="space-y-6">
-                                <h3 className="text-lg font-semibold">Skills</h3>
-                                {editableData.skills.map((category, catIndex) => (
-                                     <div key={catIndex} className="p-4 border rounded-lg dark:border-gray-700 space-y-3">
-                                         <h4 className="font-bold">{category.title}</h4>
-                                         {category.skills.map((skill, skillIndex) => (
-                                             <div key={skillIndex} className="grid grid-cols-3 gap-2 items-center">
-                                                <input type="text" value={skill.name} onChange={e => handleSkillChange(catIndex, skillIndex, 'name', e.target.value)} className={inputStyleClasses} placeholder="Skill Name"/>
-                                                 <select value={skill.icon} onChange={e => handleSkillChange(catIndex, skillIndex, 'icon', e.target.value)} className={inputStyleClasses}>
-                                                    {Object.keys(iconMap).map(iconName => <option key={iconName} value={iconName}>{iconName}</option>)}
-                                                 </select>
-                                                <input type="color" value={skill.color} onChange={e => handleSkillChange(catIndex, skillIndex, 'color', e.target.value)} className="h-10 w-full p-1 border rounded-md dark:border-gray-700"/>
-                                             </div>
-                                         ))}
-                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </main>
-                </div>
-                <div className="p-4 border-t dark:border-gray-700 flex justify-between items-center">
-                    <span className="text-sm text-green-500">{saveStatus}</span>
-                    <GradientButton onClick={handleSave}>
-                        <FiSave className="mr-2"/> Save Changes
-                    </GradientButton>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
-
 // Main App Component
 const App = () => {
-    const [portfolioData, setPortfolioData] = useState<PortfolioData>(defaultPortfolioData);
+    const [portfolioData, updatePortfolioData] = usePortfolioData();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [showAuthModal, setShowAuthModal] = useState(false);
-
-
-    useEffect(() => {
-        try {
-            const savedData = localStorage.getItem('portfolioData');
-            if (savedData) {
-                setPortfolioData(JSON.parse(savedData));
-            }
-        } catch (err) {
-            console.error("Failed to parse portfolio data from localStorage", err);
-        }
-    }, []);
-
-    function updatePortfolioData(newData: PortfolioData) {
-        localStorage.setItem('portfolioData', JSON.stringify(newData));
-        setPortfolioData(newData);
-    }
-
-    const handleLoginSuccess = () => {
-        setShowAuthModal(false);
-        setIsAdminOpen(true);
-    };
 
   return (
     <ThemeProvider>
@@ -919,15 +572,12 @@ const App = () => {
         <Footer data={portfolioData} />
         <ScrollToTopButton />
         <button
-            onClick={() => setShowAuthModal(true)}
+            onClick={() => setIsAdminOpen(true)}
             className="fixed bottom-8 left-8 bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl z-50 hover:bg-gray-600 transition-colors"
             aria-label="Open Admin Panel"
         >
             <FiSettings />
         </button>
-        <AnimatePresence>
-            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onSuccess={handleLoginSuccess} />}
-        </AnimatePresence>
         <AnimatePresence>
             {isAdminOpen && <AdminPanel data={portfolioData} onSave={updatePortfolioData} onClose={() => setIsAdminOpen(false)} />}
         </AnimatePresence>

@@ -22,11 +22,21 @@ export interface Project {
 }
 
 export interface Experience {
+  id: number;
   date: string;
   title: string;
   company: string;
   description: string;
 }
+
+export interface Education {
+  id: number;
+  date: string;
+  degree: string;
+  institution: string;
+  description: string;
+}
+
 
 export interface Certificate {
   id: number;
